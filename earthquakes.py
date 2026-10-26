@@ -4,6 +4,9 @@
 # This is external library that you may need to install first.
 import requests
 import json
+import matplotlib.pyplot as plt
+import numpy as np
+from datetime import datetime
 
 
 def get_data():
@@ -58,9 +61,62 @@ def get_maximum(data):
     return max_mag, max_pos
 
 
+# 新增：提取每一条地震的【年份】和【震级】
+def extract_year_mag(data):
+    years = []
+    magnitudes = []
+    for quake in data["features"]:
+        # time 是毫秒时间戳
+        time_ms = quake["properties"]["time"]
+        time_sec = time_ms / 1000
+        dt = datetime.fromtimestamp(time_sec)
+        year = dt.year
+        mag = get_magnitude(quake)
+        years.append(year)
+        magnitudes.append(mag)
+    return np.array(years), np.array(magnitudes)
+
+def plot_annual_count(years, magnitudes):
+    # 统计每年地震数量
+    unique_years, counts = np.unique(years, return_counts=True)
+    plt.figure(figsize=(10,5))
+    plt.bar(unique_years, counts, color="#4472C4")
+    plt.xlabel("Year")
+    plt.ylabel("Number of earthquakes")
+    plt.title("Annual frequency of earthquakes")
+    plt.grid(axis="y", alpha=0.3)
+    plt.tight_layout()
+    plt.savefig("annual_count.png", dpi=300)
+    plt.close()
+
+
+def plot_annual_mean_mag(years, magnitudes):
+    unique_years = np.unique(years)
+    mean_mags = []
+    for y in unique_years:
+        mask = years == y
+        mean_m = np.mean(magnitudes[mask])
+        mean_mags.append(mean_m)
+    plt.figure(figsize=(10,5))
+    plt.plot(unique_years, mean_mags, marker="o", color="#ED7D31", linewidth=2)
+    plt.xlabel("Year")
+    plt.ylabel("Average magnitude")
+    plt.title("Annual average earthquake magnitude")
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig("annual_mean_mag.png", dpi=300)
+    plt.close()
+
 # With all the above functions defined, we can now call them and get the result
 if __name__ == "__main__":
     data = get_data()
     print(f"Loaded {count_earthquakes(data)} earthquakes")
     max_magnitude, max_location = get_maximum(data)
     print(f"The strongest earthquake was at {max_location} with magnitude {max_magnitude}")
+
+
+# 绘图部分
+    years_arr, mags_arr = extract_year_mag(data)
+    plot_annual_count(years_arr, mags_arr)
+    plot_annual_mean_mag(years_arr, mags_arr)
+    print("Plots saved: annual_count.png , annual_mean_mag.png")
